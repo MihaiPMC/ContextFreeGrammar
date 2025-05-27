@@ -1,5 +1,6 @@
 import random
 
+
 def read_grammar(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         n = int(f.readline())
@@ -21,7 +22,6 @@ def read_grammar(file_path):
         k = int(f.readline())
         S = f.readline().strip()
 
-
     overlap = set(V) & set(E)
     if overlap:
         raise ValueError(f"Non-terminals and terminals overlap: {overlap}")
@@ -37,6 +37,7 @@ def read_grammar(file_path):
                     raise ValueError(f"Symbol '{sym}' in production '{lhs}->{alt}' not in V or Σ")
     return V, E, R, S
 
+
 def print_grammar(V, E, R, S):
     print('V =', V)
     print('E =', E)
@@ -44,6 +45,7 @@ def print_grammar(V, E, R, S):
     for lhs, alts in R.items():
         print(f'{lhs} -> {" | ".join(alts)}')
     print('S =', S)
+
 
 def stringGenerate(V, E, R, S):
     def generate_one():
@@ -60,7 +62,7 @@ def stringGenerate(V, E, R, S):
                 replacement = []
             else:
                 replacement = list(alt)
-            symbols = symbols[:i] + replacement + symbols[i+1:]
+            symbols = symbols[:i] + replacement + symbols[i + 1:]
         result = ''.join(symbols)
         return result if len(result) <= 10 else None
 
@@ -71,6 +73,7 @@ def stringGenerate(V, E, R, S):
         if s is not None:
             results.append(s)
     return results
+
 
 def derivation(target, V, E, R, S):
     path = []
@@ -96,7 +99,7 @@ def derivation(target, V, E, R, S):
             path.pop()
             ops.pop()
             return False
-            
+
         current_str = ''.join(current)
         if current_str in cache:
             path.pop()
@@ -108,7 +111,7 @@ def derivation(target, V, E, R, S):
             if sym in R:
                 for prod in R[sym]:
                     replacement = [] if prod == 'ε' else list(prod)
-                    next_form = current[:i] + replacement + current[i+1:]
+                    next_form = current[:i] + replacement + current[i + 1:]
                     if dfs(next_form, depth + 1, f"{sym}->{prod}"):
                         result = True
                         break
@@ -116,23 +119,20 @@ def derivation(target, V, E, R, S):
                     break
 
         cache[current_str] = result
-        
+
         if not result:
             path.pop()
             ops.pop()
         return result
 
     if dfs([S], 0):
-        print('Derivation path:')
-        for form, op in zip(path, ops):
-            if op:
-                print(f"{form}   ({op})")
-            else:
-                print(form)
-        return list(zip(path, ops))
+        return list(zip(path, ops)), True
     else:
-        print(f'Target "{target}" cannot be derived within depth 15.')
-        return False
+        return None, False
+
+def recognizer(target, V, E, R, S):
+    result, success = derivation(target, V, E, R, S)
+    return success
 
 
 if __name__ == '__main__':
@@ -146,8 +146,9 @@ if __name__ == '__main__':
         print(s if s != '' else 'ε')
 
     target = input('Enter a target string to derive: ')
-    result = derivation(target, V, E, R, S)
-    if result == False:
+    result, success = derivation(target, V, E, R, S)
+    if not success:
+        print(f'Target "{target}" cannot be derived within depth 15.')
         print(f'The string "{target}" cannot be derived from the grammar.')
     else:
         print(f'The string "{target}" can be derived from the grammar.')
@@ -157,3 +158,9 @@ if __name__ == '__main__':
                 print(f"{form}   ({op})")
             else:
                 print(form)
+
+    target = input('Enter a target string to recognize: ')
+    if recognizer(target, V, E, R, S):
+        print(f'The string "{target}" is recognized by the grammar.')
+    else:
+        print(f'The string "{target}" is not recognized by the grammar.')
