@@ -2,6 +2,7 @@ import random
 
 
 def read_grammar(file_path):
+    """Read and validate grammar definitions from a text file."""
     with open(file_path, 'r', encoding='utf-8') as f:
         n = int(f.readline())
         V = [f.readline().strip() for _ in range(n)]
@@ -39,6 +40,7 @@ def read_grammar(file_path):
 
 
 def print_grammar(V, E, R, S):
+    """Display non-terminals, terminals, productions, and start symbol."""
     print('V =', V)
     print('E =', E)
     print('R =')
@@ -48,12 +50,16 @@ def print_grammar(V, E, R, S):
 
 
 def stringGenerate(V, E, R, S):
+    """Generate up to 10 random strings from the grammar."""
     def generate_one():
+        """Expand non-terminals until only terminals remain."""
         symbols = [S]
         while any(sym in V for sym in symbols):
+            # avoid overly long intermediate forms
             terminals = [sym for sym in symbols if sym in E]
             if len(terminals) > 10:
                 return None
+            # pick a non-terminal index and apply a random production
             idxs = [i for i, sym in enumerate(symbols) if sym in V]
             i = random.choice(idxs)
             sym = symbols[i]
@@ -63,6 +69,7 @@ def stringGenerate(V, E, R, S):
             else:
                 replacement = list(alt)
             symbols = symbols[:i] + replacement + symbols[i + 1:]
+        # combine terminal symbols into a string
         result = ''.join(symbols)
         return result if len(result) <= 10 else None
 
@@ -76,19 +83,22 @@ def stringGenerate(V, E, R, S):
 
 
 def derivation(target, V, E, R, S):
-    path = []
-    ops = []
-
-    cache = {}
+    """Attempt to derive `target` string using DFS with caching."""
+    path = []   # list of sentential forms
+    ops = []    # list of applied productions
+    cache = {}  # memoize failed forms
 
     def dfs(current, depth, op=None):
+        """Recursive DFS helper with depth limit and pruning."""
         sent = ''.join(current) or 'ε'
-        path.append(sent)
-        ops.append(op)
+        path.append(sent)      # record current form
+        ops.append(op)         # record production applied
 
+        # success check
         if sent == target:
             return True
 
+        # depth limit and terminal‐count pruning
         if depth >= 15:
             path.pop()
             ops.pop()
@@ -100,16 +110,19 @@ def derivation(target, V, E, R, S):
             ops.pop()
             return False
 
-        current_str = ''.join(current)
-        if current_str in cache:
+        key = ''.join(current)
+        if key in cache:
+            # reuse cached failure
             path.pop()
             ops.pop()
-            return cache[current_str]
+            return cache[key]
 
         result = False
+        # try expanding each non-terminal
         for i, sym in enumerate(current):
             if sym in R:
                 for prod in R[sym]:
+                    # build next sentential form
                     replacement = [] if prod == 'ε' else list(prod)
                     next_form = current[:i] + replacement + current[i + 1:]
                     if dfs(next_form, depth + 1, f"{sym}->{prod}"):
@@ -118,19 +131,21 @@ def derivation(target, V, E, R, S):
                 if result:
                     break
 
-        cache[current_str] = result
-
+        cache[key] = result
         if not result:
+            # backtrack on failure
             path.pop()
             ops.pop()
         return result
 
+    # start DFS and return (path, success) or (None, False)
     if dfs([S], 0):
         return list(zip(path, ops)), True
     else:
         return None, False
 
 def recognizer(target, V, E, R, S):
+    """Check if `target` string can be derived from the grammar."""
     result, success = derivation(target, V, E, R, S)
     return success
 
